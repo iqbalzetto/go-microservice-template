@@ -1,4 +1,4 @@
-module user-service
+module go-microservice-template
 
 go 1.23.2
 

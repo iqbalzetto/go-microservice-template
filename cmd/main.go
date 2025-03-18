@@ -3,16 +3,16 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"go-microservice-template/pkg/config"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
-	"user-service/pkg/config"
 
-	_ "github.com/lib/pq"
+	router "go-microservice-template/api/http"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	_ "github.com/lib/pq"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
@@ -86,11 +86,9 @@ func main() {
 	}
 	defer db.Close() // Ensure the DB connection is closed on shutdown
 
-	//SET UP SERVER
+	//SET UP ROUTER
 	e := echo.New()
-	e.GET("/users", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, Users!")
+	router.InitRoutes(e)
 
-	})
 	e.Logger.Fatal(e.Start(":4001"))
 }
