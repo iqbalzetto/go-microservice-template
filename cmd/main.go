@@ -7,8 +7,12 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	router "go-microservice-template/api/http"
+	"go-microservice-template/internal/app"
+	router "go-microservice-template/internal/app/api/http"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -49,6 +53,10 @@ func initDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open DB connection: %v", err)
 	}
 
+	dbConn.SetMaxOpenConns(10)
+	dbConn.SetMaxIdleConns(5)
+	dbConn.SetConnMaxLifetime(60 * time.Minute)
+
 	// Test the connection
 	if err := dbConn.Ping(); err != nil {
 		dbConn.Close()
@@ -56,6 +64,7 @@ func initDB() (*sql.DB, error) {
 	}
 
 	log.Println("✅ Successfully connected to the PostgreSQL database")
+
 	return dbConn, nil
 }
 
@@ -66,8 +75,26 @@ func init() {
 	}
 }
 
-func main() {
+// Graceful shutdown function
+func handleShutdown() {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
+	go func() {
+		<-quit
+		fmt.Println("\nShutting down gracefully...")
+
+		if db != nil {
+			fmt.Println("Closing PostgreSQL connection...")
+			db.Close()
+		}
+
+		fmt.Println("Cleanup complete. Exiting.")
+		os.Exit(0)
+	}()
+}
+
+func main() {
 	//SET UP TRACER
 	appEnv := os.Getenv("APP_ENV")
 	if appEnv == "staging" || appEnv == "production" {
@@ -86,9 +113,15 @@ func main() {
 	}
 	defer db.Close() // Ensure the DB connection is closed on shutdown
 
+	//SET UP HANDLER
+	handlers := app.InitUserDomainHandler(db)
+
 	//SET UP ROUTER
 	e := echo.New()
-	router.InitRoutes(e)
+	router.InitRoutes(e, handlers)
+
+	// Handle graceful shutdown
+	handleShutdown()
 
 	e.Logger.Fatal(e.Start(":4001"))
 }

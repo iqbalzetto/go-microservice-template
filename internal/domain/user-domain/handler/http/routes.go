@@ -1,13 +1,16 @@
-package routes
+package http
 
 import (
-	"net/http"
+	"go-microservice-template/internal/domain/user-domain/handler"
 
 	"github.com/labstack/echo/v4"
 )
 
-func InitRoutes(e *echo.Echo) {
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
+func InitRoutes(e *echo.Echo, userDomainHandlers *handler.UserDomainHandlers) {
+
+	v1 := e.Group("/v1")
+
+	userRoutes := v1.Group("/users")
+	userRoutes.GET("", userDomainHandlers.UserHandler.GetAllUsers)
+
 }
