@@ -7,6 +7,7 @@ import (
 	"go-microservice-template/internal/domain/user-domain/usecase"
 )
 
+// TEST COMMIT
 // Initialize repositories, usecases and handlers for reuse
 func InitUserDomainHandler(db *sql.DB) *handler.UserDomainHandlers {
 	// Initialize repositories
