@@ -5,6 +5,7 @@ import (
 	"errors"
 	"go-microservice-template/internal/domain/user-domain/entity"
 	"go-microservice-template/internal/domain/user-domain/usecase"
+	res "go-microservice-template/pkg/response"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ func (h *UserHandler) GetAllUsers(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
 	}
 
-	return c.JSON(http.StatusOK, user)
+	return res.JSON(c, res.StatusOK, user)
 }
 
 func (h *UserHandler) CreateUser(c echo.Context) error {

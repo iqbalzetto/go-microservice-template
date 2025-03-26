@@ -17,7 +17,7 @@ func NewUserRepository(db *sql.DB) *UserPostgresRepo {
 }
 
 func (u *UserPostgresRepo) GetAllUsers() ([]entity.User, error) {
-	rows, err := u.DB.Query("SELECT * FROM users")
+	rows, err := u.DB.Query("SELECT id,username,email FROM users")
 	if err != nil {
 		return nil, err
 	}
