@@ -13,6 +13,7 @@ func InitRoutes(e *echo.Echo, userDomainHandlers *handler.UserDomainHandlers) {
 	userRoutes := v1.Group("/users")
 	userRoutes.GET("", userDomainHandlers.UserHandler.GetAllUsers)
 	userRoutes.POST("", userDomainHandlers.UserHandler.CreateUser)
+	userRoutes.POST("/upload-pp/:id", userDomainHandlers.UserHandler.UploadProfilePicture)
 	userRoutes.GET("/:id", userDomainHandlers.UserHandler.GetUserByID)
 	userRoutes.PUT("/:id", userDomainHandlers.UserHandler.UpdateUser)
 	userRoutes.DELETE("/:id", userDomainHandlers.UserHandler.DeleteUser)

@@ -17,11 +17,14 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	_ "github.com/lib/pq"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 // Global DB connection pool
 var db *sql.DB
+var minioClient *minio.Client
 
 func initDB() (*sql.DB, error) {
 	// Load environment variables
@@ -66,6 +69,22 @@ func initDB() (*sql.DB, error) {
 	log.Println("✅ Successfully connected to the PostgreSQL database")
 
 	return dbConn, nil
+}
+
+func initMinio() (*minio.Client, error) {
+	minioKey := os.Getenv("MINIO_KEY")
+	minioSecret := os.Getenv("MINIO_SECRET")
+	minioUrl := os.Getenv("MINIO_URL")
+	var err error
+	minioClient, err = minio.New(minioUrl, &minio.Options{
+		Creds:  credentials.NewStaticV4(minioKey, minioSecret, ""),
+		Secure: false, // Set to true if using HTTPS
+	})
+	if err != nil {
+		log.Fatalf("Failed to initialize MinIO client: %v", err)
+	}
+	fmt.Println("✅ MinIO client initialized")
+	return minioClient, nil
 }
 
 func init() {
@@ -113,8 +132,14 @@ func main() {
 	}
 	defer db.Close() // Ensure the DB connection is closed on shutdown
 
+	//SET UP MINIO CLIENT
+	minioClient, err = initMinio()
+	if err != nil {
+		log.Fatalf("Failed to initialize MinIO client: %v", err)
+	}
+
 	//SET UP HANDLER
-	handlers := app.InitUserDomainHandler(db)
+	handlers := app.InitUserDomainHandler(db, minioClient)
 
 	//SET UP ROUTER
 	e := echo.New()

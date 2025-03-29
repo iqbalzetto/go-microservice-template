@@ -6,6 +6,7 @@ import (
 	"go-microservice-template/internal/domain/user-domain/entity"
 	"go-microservice-template/internal/domain/user-domain/usecase"
 	res "go-microservice-template/pkg/response"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -24,10 +25,11 @@ func (h *UserHandler) GetAllUsers(c echo.Context) error {
 
 	user, err := h.userUsecase.GetAllUsers(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		log.Println(err)
+		return res.JSON(c, res.StatusNotFound, map[string]string{"error": err.Error()})
 	}
 	if user == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+		return res.JSON(c, res.StatusNotFound, nil)
 	}
 
 	return res.JSON(c, res.StatusOK, user)
@@ -108,4 +110,18 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "User deleted successfully"})
+}
+
+func (h *UserHandler) UploadProfilePicture(c echo.Context) error {
+	var user entity.User
+
+	if err := c.Bind(&user); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	if err := h.userUsecase.UploadProfilePicture(c.Request().Context()); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "Profile picture updated successfully"})
 }
