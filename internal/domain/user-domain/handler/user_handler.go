@@ -3,11 +3,13 @@ package handler
 import (
 	"database/sql"
 	"errors"
+	"go-microservice-template/internal/domain/user-domain/dto"
 	"go-microservice-template/internal/domain/user-domain/entity"
 	"go-microservice-template/internal/domain/user-domain/usecase"
 	res "go-microservice-template/pkg/response"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -113,13 +115,44 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 }
 
 func (h *UserHandler) UploadProfilePicture(c echo.Context) error {
-	var user entity.User
-
-	if err := c.Bind(&user); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	// Parse user ID from the request URL (e.g., /users/:id)
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
 	}
 
-	if err := h.userUsecase.UploadProfilePicture(c.Request().Context()); err != nil {
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "file not found")
+	}
+
+	src, err := fileHeader.Open()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to open file")
+	}
+	defer src.Close()
+
+	// Read the first 512 bytes to detect the content type
+	buffer := make([]byte, 512)
+	_, err = src.Read(buffer)
+	if err != nil {
+		return err
+	}
+
+	// Reset the file pointer back to the beginning for future reads
+	src.Seek(0, 0)
+	contentType := http.DetectContentType(buffer)
+
+	// create file DTO
+	inputFileDTO := dto.InputFileDTO{
+		Name:      fileHeader.Filename,
+		Size:      fileHeader.Size,
+		Type:      contentType,
+		Extension: fileHeader.Filename[strings.LastIndex(fileHeader.Filename, ".")+1:],
+		Reader:    src,
+	}
+
+	if err := h.userUsecase.UploadProfilePicture(c.Request().Context(), id, inputFileDTO); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 

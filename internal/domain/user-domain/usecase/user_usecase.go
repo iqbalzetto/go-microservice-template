@@ -3,9 +3,9 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"go-microservice-template/internal/domain/user-domain/dto"
 	"go-microservice-template/internal/domain/user-domain/entity"
 	"go-microservice-template/internal/domain/user-domain/repository"
-	"os"
 
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
@@ -46,30 +46,38 @@ func (u *UserUsecase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return u.userRepo.DeleteUser(id)
 }
 
-func (u *UserUsecase) UploadProfilePicture(ctx context.Context) error {
+func (u *UserUsecase) UploadProfilePicture(ctx context.Context, id uuid.UUID, file dto.InputFileDTO) error {
 	//upload profile picture to minio
 	if u.mc == nil {
 		return fmt.Errorf("MinIO client is not initialized")
 	}
 
-	file, err := os.Open("./apple.jpeg")
-	if err != nil {
-		return fmt.Errorf("failed to open file: %v", err)
-	}
-	defer file.Close()
-
-	fileStat, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("failed to get file info: %v", err)
-	}
-
-	_, err = u.mc.PutObject(context.Background(), "user-service", "testing", file, fileStat.Size(), minio.PutObjectOptions{
-		ContentType: "image/jpeg",
+	_, err := u.mc.PutObject(context.Background(), "user-service", "test/"+file.Name, file.Reader, file.Size, minio.PutObjectOptions{
+		ContentType: file.Type,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upload file: %v", err)
 	}
 
+	//upload profile picture to database
+
 	return nil
 
+}
+
+func (u *UserUsecase) ExportToExcel(ctx context.Context, id uuid.UUID) (string, error) {
+	// Get user by ID
+	user, err := u.userRepo.GetUserByID(id)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user: %v", err)
+	}
+
+	// Create Excel file and write user data
+	fileName := fmt.Sprintf("%s.xlsx", user.Username)
+	err = createExcelFile(fileName, user)
+	if err != nil {
+		return "", fmt.Errorf("failed to create Excel file: %v", err)
+	}
+
+	return fileName, nil
 }
