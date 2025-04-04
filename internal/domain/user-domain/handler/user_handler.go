@@ -158,3 +158,20 @@ func (h *UserHandler) UploadProfilePicture(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Profile picture updated successfully"})
 }
+
+func (h *UserHandler) ExportToExcel(c echo.Context) error {
+	users, err := h.userUsecase.ExportToExcel(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	if users == nil {
+		return c.JSON(http.StatusNotFound, nil)
+	}
+
+	// Set response headers
+	c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Response().Header().Set("Content-Disposition", "attachment; filename=users.xlsx")
+
+	// Send file
+	return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", users.Bytes())
+}
